@@ -50,27 +50,6 @@ app.post('/register', async (req, res) => {
     }
 });
 
-
-// // Register API
-// app.post('/register', async (req, res) => {
-//     const { username, password } = req.body;
-
-
-//     // Check if the username already exists
-//     let user = await User.findOne({ username });
-
-//     if (!user) {
-//         // Hash the password before saving it
-//         const hashedPassword = await bcrypt.hash(password, 10);
-
-//         user = new User({ username, password: hashedPassword });
-//         await user.save();
-//         res.status(200).send({ message: 'Registration successful', user });
-//     } else {
-//         res.status(400).send({ message: 'Username already taken' });
-//     }
-// });
-
 // Login API
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
