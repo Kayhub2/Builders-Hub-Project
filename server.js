@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');  // Add bcrypt for password hashing
+const bcrypt = require('bcryptjs'); // Use bcrypt for hashing passwords
 
 const app = express();
 app.use(cors());
@@ -31,26 +31,8 @@ const searchSchema = new mongoose.Schema({
     searches: [String],
 });
 const Search = mongoose.model('Search', searchSchema);
-app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    let user = await User.findOne({ username });
 
-    if (!user) {
-        // If the user doesn't exist, register a new user
-        user = new User({ username, password });
-        await user.save();
-        res.status(200).send({ message: 'Registration successful', user });
-    } else {
-        // If user exists, check if passwords match
-        if (user.password === password) {
-            res.status(200).send({ message: 'Login successful', user });
-        } else {
-            res.status(400).send({ message: 'Invalid password' });
-        }
-    }
-});
-
-// Login API
+// Register API
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
 
@@ -58,17 +40,13 @@ app.post('/register', async (req, res) => {
         let user = await User.findOne({ username });
 
         if (!user) {
-            // Register a new user if they don't exist
-            user = new User({ username, password });
+            // Register a new user
+            const hashedPassword = await bcrypt.hash(password, 10); // Hash the password
+            user = new User({ username, password: hashedPassword });
             await user.save();
             res.status(200).send({ message: 'Registration successful', user });
         } else {
-            // User exists, validate the password
-            if (user.password === password) {
-                res.status(200).send({ message: 'Login successful', user });
-            } else {
-                res.status(401).send({ message: 'Invalid username or password' });
-            }
+            res.status(400).send({ message: 'Username already exists' });
         }
     } catch (error) {
         console.error('Error in /register:', error);
@@ -76,20 +54,49 @@ app.post('/register', async (req, res) => {
     }
 });
 
+// Login API
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        const user = await User.findOne({ username });
+
+        if (!user) {
+            return res.status(401).send({ message: 'Invalid username or password' });
+        }
+
+        // Compare the provided password with the hashed password in the database
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (isPasswordValid) {
+            res.status(200).send({ message: 'Login successful', user });
+        } else {
+            res.status(401).send({ message: 'Invalid username or password' });
+        }
+    } catch (error) {
+        console.error('Error in /login:', error);
+        res.status(500).send({ message: 'An error occurred. Please try again.' });
+    }
+});
 
 // Save Search API
 app.post('/save-search', async (req, res) => {
     const { userId, search } = req.body;
 
-    let userSearch = await Search.findOne({ userId });
-    if (!userSearch) {
-        userSearch = new Search({ userId, searches: [search] });
-    } else {
-        userSearch.searches.push(search);
-    }
+    try {
+        let userSearch = await Search.findOne({ userId });
+        if (!userSearch) {
+            userSearch = new Search({ userId, searches: [search] });
+        } else {
+            userSearch.searches.push(search);
+        }
 
-    await userSearch.save();
-    res.status(200).send({ message: 'Search saved successfully', searches: userSearch.searches });
+        await userSearch.save();
+        res.status(200).send({ message: 'Search saved successfully', searches: userSearch.searches });
+    } catch (error) {
+        console.error('Error in /save-search:', error);
+        res.status(500).send({ message: 'An error occurred. Please try again.' });
+    }
 });
 
 // Start the server
