@@ -36,18 +36,22 @@ const Search = mongoose.model('Search', searchSchema);
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
 
+    if (!username || !password) {
+        return res.status(400).send({ message: 'Username and password are required' });
+    }
+
     try {
         let user = await User.findOne({ username });
 
-        if (!user) {
-            // Register a new user
-            const hashedPassword = await bcrypt.hash(password, 10); // Hash the password
-            user = new User({ username, password: hashedPassword });
-            await user.save();
-            res.status(200).send({ message: 'Registration successful', user });
-        } else {
-            res.status(400).send({ message: 'Username already exists' });
+        if (user) {
+            return res.status(400).send({ message: 'User already exists. Please log in.' });
         }
+
+        const hashedPassword = await bcrypt.hash(password, 10); // Hash the password
+        user = new User({ username, password: hashedPassword });
+
+        await user.save();
+        res.status(201).send({ message: 'Registration successful', user });
     } catch (error) {
         console.error('Error in /register:', error);
         res.status(500).send({ message: 'An error occurred. Please try again.' });
@@ -58,6 +62,10 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
+    if (!username || !password) {
+        return res.status(400).send({ message: 'Username and password are required' });
+    }
+
     try {
         const user = await User.findOne({ username });
 
@@ -65,14 +73,13 @@ app.post('/login', async (req, res) => {
             return res.status(401).send({ message: 'Invalid username or password' });
         }
 
-        // Compare the provided password with the hashed password in the database
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await bcrypt.compare(password, user.password); // Compare hashed passwords
 
-        if (isPasswordValid) {
-            res.status(200).send({ message: 'Login successful', user });
-        } else {
-            res.status(401).send({ message: 'Invalid username or password' });
+        if (!isPasswordValid) {
+            return res.status(401).send({ message: 'Invalid username or password' });
         }
+
+        res.status(200).send({ message: 'Login successful', user });
     } catch (error) {
         console.error('Error in /login:', error);
         res.status(500).send({ message: 'An error occurred. Please try again.' });
