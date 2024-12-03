@@ -23,21 +23,25 @@
         h1 {
             font-size: 2em;
             margin-bottom: 20px;
-            color:coral;
+            color: coral;
         }
         p {
             font-size: 1.2em;
         }
-        .back-link {
-            display: inline-block;
+        .button-container {
             margin-top: 20px;
+        }
+        .back-link, .external-link {
+            display: inline-block;
+            margin-top: 10px;
             padding: 10px;
             background: coral;
             color: white;
             text-decoration: none;
             border-radius: 5px;
+            margin-right: 10px;
         }
-        .back-link:hover {
+        .back-link:hover, .external-link:hover {
             background: #e95b3c;
         }
     </style>
@@ -45,9 +49,12 @@
 <body>
     <div class="container">
         <h1>App Updates</h1>
-        <p>This is Your Road Companion App. Stay tuned for the latest features and improvements! We're working hard to enhance your experience;
-             and to make this app your real road companion!</p>
-        <a href="index.html" class="back-link">Back to Registration</a>
+        <p>This is Your Road Companion App. Stay tuned for the latest features and improvements! We're working hard to enhance your experience and to make this app your real road companion!</p>
+        <div class="button-container">
+            <a href="index.html" class="back-link">Back to Registration</a>
+            <!-- External Link Button -->
+            <a href="https://www.finelib.com/transportation" class="external-link" target="_blank">Contact A Registered Transport Company</a>
+        </div>
     </div>
 </body>
 </html>
