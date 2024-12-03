@@ -68,10 +68,11 @@
         </form>
         <button id="loginButton" style="margin-top: 10px;">Login</button>
         <a href="updates.html" class="link">View App Updates</a>
-
     </div>
 
     <script>
+        const backendUrl = 'http://localhost:3000'; // Backend URL
+
         // Register User
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -79,7 +80,7 @@
             const password = document.getElementById('password').value;
         
             try {
-                const response = await fetch('http://localhost:3000/register', {
+                const response = await fetch(`${backendUrl}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password }),
@@ -89,9 +90,9 @@
         
                 if (response.ok) {
                     alert(data.message);
-                    window.location.href = 'tracker.html';
+                    window.location.href = 'tracker.html';  // Redirect on success
                 } else {
-                    alert(data.message); // Show error message for invalid credentials
+                    alert(data.message);  // Show error message for invalid credentials
                 }
             } catch (error) {
                 alert('An error occurred. Please try again.');
@@ -105,14 +106,16 @@
             const password = document.getElementById('password').value;
 
             try {
-                const response = await fetch('http://localhost:3000/login', {
+                const response = await fetch(`${backendUrl}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password }),
                 });
                 const data = await response.json();
                 alert(data.message);
-                window.location.href = 'tracker.html';
+                if (response.ok) {
+                    window.location.href = 'tracker.html';  // Redirect to tracker page on login success
+                }
             } catch (error) {
                 alert('Error logging in. Please try again.');
                 console.error(error);

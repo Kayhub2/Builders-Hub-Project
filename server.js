@@ -5,10 +5,19 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs'); // Use bcrypt for hashing passwords
 
 const app = express();
-app.use(cors());
+
+// CORS Configuration
+const corsOptions = {
+    origin: ['http://127.0.0.1:5500', 'https://kayhub2.github.io'], // Add your frontend origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
+
+// Middleware to parse JSON bodies
 app.use(bodyParser.json());
 
-// Connect to MongoDB
+// MongoDB Connection
 mongoose.connect('mongodb://localhost:27017/traffic_tracker', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -24,13 +33,6 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
 });
 const User = mongoose.model('User', userSchema);
-
-// Search Schema
-const searchSchema = new mongoose.Schema({
-    userId: mongoose.Schema.Types.ObjectId,
-    searches: [String],
-});
-const Search = mongoose.model('Search', searchSchema);
 
 // Register API
 app.post('/register', async (req, res) => {
@@ -82,26 +84,6 @@ app.post('/login', async (req, res) => {
         res.status(200).send({ message: 'Login successful', user });
     } catch (error) {
         console.error('Error in /login:', error);
-        res.status(500).send({ message: 'An error occurred. Please try again.' });
-    }
-});
-
-// Save Search API
-app.post('/save-search', async (req, res) => {
-    const { userId, search } = req.body;
-
-    try {
-        let userSearch = await Search.findOne({ userId });
-        if (!userSearch) {
-            userSearch = new Search({ userId, searches: [search] });
-        } else {
-            userSearch.searches.push(search);
-        }
-
-        await userSearch.save();
-        res.status(200).send({ message: 'Search saved successfully', searches: userSearch.searches });
-    } catch (error) {
-        console.error('Error in /save-search:', error);
         res.status(500).send({ message: 'An error occurred. Please try again.' });
     }
 });
