@@ -8,7 +8,7 @@ const app = express();
 
 // Updated CORS Configuration
 const corsOptions = {
-    origin: ['http://127.0.0.1:5500', 'https://kayhub2.github.io', 'http://<your-IP>:3000'],
+    origin: ['http://127.0.0.1:5500', 'https://kayhub2.github.io', 'http://192.168.92.69:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: ['Content-Type', 'Authorization'],
 };
