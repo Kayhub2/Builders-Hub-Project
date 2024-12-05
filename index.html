@@ -29,7 +29,6 @@
             margin-bottom: 20px;
             color: coral;
         }
-
         h2 {
             font-size: 2em;
             margin-bottom: 20px;
@@ -78,7 +77,8 @@
     </div>
 
     <script>
-        const backendUrl = 'http://localhost:3000'; // Backend URL
+        // Set the backend URL dynamically
+        const backendUrl = `http://${window.location.hostname}:3000`; // Use the hostname of the current environment
 
         // Register User
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
