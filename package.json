@@ -1,0 +1,22 @@
+{
+  "name": "builders-hub-project",
+  "version": "1.0.0",
+  "description": "**#URBAN REAL-TIME TRAFFIC TRACKER**\r This is the URBAN REAL-TIME TRACKER (URTT). URTT is a web app that provides real-time traffic updates and helps you find beat routes to your destination.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "leaflet": "^1.9.4",
+    "mongoose": "^8.8.3"
+  }
+}

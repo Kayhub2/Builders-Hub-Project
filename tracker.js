@@ -1,92 +1,63 @@
 let map;
-const tomtomKey = 'CUpygEvKtS0IWBc06QJawQldwhJE0PXw'; // Replace with your TomTom API Key
+let marker;
 
-// Initialize the map
-function initMap() {
-    const defaultLocation = { lat: 6.1517, lng: 6.7857 }; // Onitsha, Nigeria
+document.addEventListener('DOMContentLoaded', () => {
+    map = L.map('map').setView([51.505, -0.09], 13); // Default map view
 
-    map = tt.map({
-        key: tomtomKey,
-        container: 'map',
-        center: defaultLocation,
-        zoom: 12,
-    });
+    // Tile layer (using OpenStreetMap tiles)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
 
-    // Add traffic flow tiles
-    const trafficFlowTiles = new tt.TrafficFlowTiles({
-        key: tomtomKey,
-        style: 'relative', // or 'absolute'
-    });
-    map.addLayer(trafficFlowTiles);
+    // Add traffic data markers and interactions (dummy data)
+    L.circle([51.505, -0.09], { radius: 200, color: 'red' }).addTo(map); // Heavy Traffic Example
+});
 
-    // Add traffic incidents tiles
-    const trafficIncidentsTiles = new tt.TrafficIncidentsTiles({
-        key: tomtomKey,
-    });
-    map.addLayer(trafficIncidentsTiles);
-}
-
-// Set location based on user input
 function setLocation() {
     const location = document.getElementById('location').value;
-    if (!location) {
-        alert('Please enter a location.');
-        return;
+    const [lat, lon] = location.split(',');
+    if (lat && lon) {
+        map.setView([parseFloat(lat), parseFloat(lon)], 13);  // Update map center
+        // Fetch traffic data for the new location
+        fetchTrafficData(lat, lon);
+    } else {
+        alert('Invalid location');
     }
-    geocodeLocation(location);
 }
 
-// Geocode location
-function geocodeLocation(location) {
-    const geocodeUrl = `https://api.tomtom.com/search/2/geocode/${encodeURIComponent(location)}.json?key=${tomtomKey}`;
-    fetch(geocodeUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('Geocoding request failed');
-            return response.json();
-        })
-        .then(data => {
-            if (data.results.length) {
-                const pos = data.results[0].position;
-                console.log('Geocoded Position:', pos); // Debug log
-                map.setCenter([pos.lon, pos.lat]);
-                new tt.Marker().setLngLat([pos.lon, pos.lat]).addTo(map);
-            } else {
-                alert('Location not found.');
-            }
-        })
-        .catch(err => console.error('Error in geocoding:', err));
-}
-
-// Use user's current location
 function getUserLocation() {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const pos = [position.coords.longitude, position.coords.latitude];
-                console.log('User Location:', pos); // Debug log
-                map.setCenter(pos);
-                new tt.Marker().setLngLat(pos).addTo(map);
-            },
-            (error) => {
-                console.error('Error getting geolocation:', error);
-                alert('Geolocation failed. Please allow location access in your browser.');
-            }
-        );
+        navigator.geolocation.getCurrentPosition(position => {
+            const { latitude, longitude } = position.coords;
+            map.setView([latitude, longitude], 13);  // Center map on user location
+            // Fetch traffic data for user location
+            fetchTrafficData(latitude, longitude);
+        }, () => {
+            alert('Geolocation not supported or denied.');
+        });
     } else {
-        alert('Your browser does not support geolocation.');
+        alert('Geolocation not supported.');
     }
 }
 
-// Toggle dark mode
+function fetchTrafficData(lat, lon) {
+    axios.get(`https://api.tomtom.com/trafficServices/v1/traffic?lat=${lat}&lon=${lon}&key=YOUR_API_KEY`)
+        .then(response => {
+            // Add markers for traffic conditions based on response data
+            // Assuming response has an array of traffic info
+            console.log(response.data);
+        })
+        .catch(error => {
+            console.error('Error fetching traffic data:', error);
+        });
+}
+
 function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
+    document.getElementById('controls').classList.toggle('dark-mode');
 }
 
-// Logout Functionality
 function logout() {
-    alert('Logged out successfully!');
-    window.location.href = 'index.html';
+    alert('Logging out...');
+    // Add actual logout logic (e.g., clear session or token)
+    window.location.href = 'index.html'; // Redirect to login page
 }
-
-// Initialize the map
-window.onload = initMap;

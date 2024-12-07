@@ -29,8 +29,9 @@
             margin-bottom: 20px;
             color: coral;
         }
+
         h2 {
-            font-size: 2em;
+            font-size: 1.5em;
             margin-bottom: 20px;
         }
         form {
@@ -66,19 +67,19 @@
     <div class="container">
         <h1>ROAD COMPANION TRAFFIC TRACKER</h1>
         <h2>Register or Login</h2>
-        <!-- Form for Register/Login -->
+        <!-- Form for Register -->
         <form id="registrationForm">
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
             <button type="submit">Register</button>
         </form>
+        <!-- Separate login button -->
         <button id="loginButton" style="margin-top: 10px;">Login</button>
         <a href="updates.html" class="link">View App Updates</a>
     </div>
 
     <script>
-        // Set the backend URL dynamically
-        const backendUrl = `http://${window.location.hostname}:3000`; // Use the hostname of the current environment
+        const backendUrl = 'http://localhost:3000'; // Backend URL
 
         // Register User
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {

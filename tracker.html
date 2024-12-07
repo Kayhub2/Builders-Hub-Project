@@ -6,45 +6,214 @@
     <title>Road Companion Traffic Tracker</title>
     <style>
         #map {
-            height: 100vh;
+            height: 80vh;
             width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
+
         #controls {
             position: absolute;
             top: 10px;
             left: 10px;
-            z-index: 5;
-            background: white;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
             padding: 10px;
             border-radius: 5px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
+
+        #controls input {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        #controls button {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: coral;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        #controls button:hover {
+            background: #ff704d;
+        }
+
         body {
             margin: 0;
             font-family: Arial, sans-serif;
         }
-        .dark-mode {
-            background-color: #333;
+
+        #controls.dark-mode {
+            background: rgba(0, 0, 0, 0.9);
             color: white;
         }
-        .dark-mode #controls {
-            background: #444;
+
+        #controls.dark-mode input {
+            background-color: #444;
+            color: white;
+            border: 1px solid #666;
+        }
+
+        #controls.dark-mode button {
+            background: #555;
+        }
+
+        #controls.dark-mode button:hover {
+            background: #777;
+        }
+
+        #legend {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
     <div id="controls">
-        <input type="text" id="location" placeholder="Enter location" style="padding: 5px;">
+        <input type="text" id="location" placeholder="Enter location (e.g. Onitsha, Nigeria)">
         <button onclick="setLocation()">Set Location</button>
         <button onclick="getUserLocation()">Use My Location</button>
         <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
         <button onclick="logout()">Logout</button>
+        
+        <div id="legend">
+            <h3>Key</h3>
+            <div class="legend-item"><span style="color:#33cc33;">&#9632;</span> Low Traffic</div>
+            <div class="legend-item"><span style="color:#ffcc00;">&#9632;</span> Moderate Traffic</div>
+            <div class="legend-item"><span style="color:#ff3300;">&#9632;</span> High Traffic</div>
+        </div>
     </div>
+
     <div id="map"></div>
-    
-    <!-- TomTom Maps SDK -->
-    <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.16.0/maps/maps-web.min.js"></script>
-    <!-- Custom Script -->
-    <script src="tracker.js"></script>
+
+    <!-- Leaflet CDN script -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let userLocation = null;
+
+        // Default location for Onitsha, Nigeria (Latitude and Longitude)
+        const defaultLocation = [6.1419, 6.7982];
+
+        // Initialize the map and center it on default location (Onitsha, Nigeria)
+        function initializeMap() {
+            map = L.map('map').setView(defaultLocation, 13); // Set initial view to Onitsha
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Add a marker for the default location
+            L.marker(defaultLocation).addTo(map).bindPopup("Onitsha, Nigeria").openPopup();
+
+            // Attempt to get the user's location if they allow
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    updateMapLocation(userLocation);
+                });
+            }
+        }
+
+        // Update map location based on user input or geolocation
+        function updateMapLocation(location) {
+            if (location) {
+                map.setView(location, 13);
+                L.marker(location).addTo(map).bindPopup("Your Location").openPopup();
+                getTrafficData(location); // Fetch traffic data for the location
+            }
+        }
+
+        // Function to fetch traffic data
+        function getTrafficData(location) {
+            const locationStr = location.join(',');
+            fetch(`http://localhost:3000/traffic?location=${locationStr}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data) {
+                        // Handle traffic data here
+                        console.log(data);
+                    }
+                })
+                .catch(error => console.log('Error fetching traffic data:', error));
+        }
+
+        // Geocoding function to convert location name to coordinates
+        function geocodeLocation(location) {
+            const apiKey = '9100b41735fb4d47a1a5557f8ab5b350'; // Replace with your actual API key
+            const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(location)}&key=${apiKey}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Geocoding response:', data); // Debugging line
+                    if (data.results && data.results.length > 0) {
+                        const lat = data.results[0].geometry.lat;
+                        const lng = data.results[0].geometry.lng;
+                        const location = [lat, lng];
+                        updateMapLocation(location);
+                    } else {
+                        alert("Location not found.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Geocoding error:", error);
+                    alert("Unable to retrieve location.");
+                });
+        }
+
+        // Set location based on user input
+        function setLocation() {
+            const locationInput = document.getElementById('location').value.trim();
+            if (locationInput) {
+                geocodeLocation(locationInput);
+            } else {
+                alert("Please enter a location.");
+            }
+        }
+
+        // Use the user's geolocation
+        function getUserLocation() {
+            if (userLocation) {
+                updateMapLocation(userLocation);
+            } else {
+                alert("Unable to access your location.");
+            }
+        }
+
+        // Toggle dark mode for controls panel
+        function toggleDarkMode() {
+            const controls = document.getElementById('controls');
+            controls.classList.toggle('dark-mode');
+        }
+
+        // Logout functionality (you can replace with actual logout logic)
+        function logout() {
+            alert('You have been logged out.');
+            window.location.href = 'index.html'; // Redirect to index page
+        }
+        // Initialize map when the page is ready
+        window.onload = initializeMap;
+    </script>
 </body>
 </html>
