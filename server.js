@@ -9,9 +9,10 @@ const app = express();
 
 // CORS Configuration
 const corsOptions = {
-    origin: ['http://127.0.0.1:5500', 'https://kayhub2.github.io'], // Add your frontend origins
+    origin: ['http://127.0.0.1:5500', 'https://kayhub2.github.io', null], // Allow 'null' origins for local files
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true // If you're handling cookies or authentication tokens
 };
 app.use(cors(corsOptions));
 
@@ -120,6 +121,9 @@ app.get('/route', async (req, res) => {
         res.status(500).send({ message: 'Failed to fetch route data.' });
     }
 });
+
+// Handle preflight OPTIONS request
+app.options('*', cors(corsOptions));  // Respond to all OPTIONS requests
 
 // Start the server
 app.listen(3000, () => console.log('Server running on http://localhost:3000'));

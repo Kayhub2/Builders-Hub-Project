@@ -129,8 +129,9 @@
         function initializeMap() {
             map = L.map('map').setView(defaultLocation, 13); // Set initial view to Onitsha
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            // TomTom map tile layer
+            L.tileLayer('https://{s}.api.tomtom.com/map/1/tile/basic/{z}/{x}/{y}.png?key=AhGkbtIXQ6QyUbnrpvYDSyrErQWnD8W5', {
+                attribution: '&copy; <a href="https://www.tomtom.com">TomTom</a>',
             }).addTo(map);
 
             // Add a marker for the default location using custom icons
@@ -160,23 +161,39 @@
             fetch(`http://localhost:3000/traffic?location=${locationStr}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data) {
-                        // Handle traffic data here
-                        console.log(data);
+                    if (data && data.traffic) {
+                        // Assuming the traffic data response has a 'traffic' key
+                        // Example handling the traffic data
+                        data.traffic.forEach(item => {
+                            // Assuming each item has lat, lng, and traffic status
+                            const markerColor = getTrafficColor(item.status);
+                            L.circleMarker([item.lat, item.lng], { color: markerColor, radius: 8 })
+                                .addTo(map)
+                                .bindPopup(`${item.status} Traffic`);
+                        });
                     }
                 })
                 .catch(error => console.log('Error fetching traffic data:', error));
         }
 
+        // Function to get marker color based on traffic status
+        function getTrafficColor(status) {
+            switch (status) {
+                case 'low': return '#33cc33';  // Low Traffic - Green
+                case 'moderate': return '#ffcc00';  // Moderate Traffic - Yellow
+                case 'high': return '#ff3300';  // High Traffic - Red
+                default: return '#000';  // Default color (black)
+            }
+        }
+
         // Geocoding function to convert location name to coordinates
         function geocodeLocation(location) {
-            const apiKey = '9100b41735fb4d47a1a5557f8ab5b350'; // Replace with your actual API key
+            const apiKey = 'AhGkbtIXQ6QyUbnrpvYDSyrErQWnD8W5'; // Replace with your actual API key
             const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(location)}&key=${apiKey}`;
 
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Geocoding response:', data); // Debugging line
                     if (data.results && data.results.length > 0) {
                         const lat = data.results[0].geometry.lat;
                         const lng = data.results[0].geometry.lng;
