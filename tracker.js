@@ -1,99 +1,135 @@
-let map;
-let marker;
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs'); // Use bcrypt for hashing passwords
+const axios = require('axios'); // For API requests
+require('dotenv').config(); // Load environment variables
 
-document.addEventListener('DOMContentLoaded', () => {
-    map = L.map('map').setView([51.505, -0.09], 13); // Default map view
+const app = express();
 
-    // Tile layer (using TomTom tiles)
-    L.tileLayer('https://{s}.api.tomtom.com/map/1/tile/basic/{z}/{x}/{y}.png?key=AhGkbtIXQ6QyUbnrpvYDSyrErQWnD8W5', {
-        attribution: '&copy; <a href="https://www.tomtom.com">TomTom</a>'
-    }).addTo(map);
+// CORS Configuration
+const corsOptions = {
+    origin: [
+        'http://127.0.0.1:5500', // Local frontend
+        'http://localhost:3000', // Local backend
+        'https://builders-hub-project.vercel.app' // Deployed frontend
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true // If you're handling cookies or authentication tokens
+};
+app.use(cors(corsOptions));
 
-    // Add a default traffic marker (heavy traffic example)
-    L.circle([51.505, -0.09], { radius: 200, color: 'red' }).addTo(map); // Heavy Traffic Example
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
+
+// MongoDB Connection
+mongoose.connect('mongodb://localhost:27017/traffic_tracker', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
 });
 
-// Set location based on input
-function setLocation() {
-    const location = document.getElementById('location').value;
-    const [lat, lon] = location.split(',');
-    if (lat && lon) {
-        map.setView([parseFloat(lat), parseFloat(lon)], 13);  // Update map center
-        // Fetch traffic data for the new location
-        fetchTrafficData(lat, lon);
-    } else {
-        alert('Invalid location. Please enter latitude and longitude.');
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.once('open', () => console.log('Connected to MongoDB'));
+
+// User Schema
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+});
+const User = mongoose.model('User', userSchema);
+
+// Register API
+app.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required.' });
     }
-}
 
-// Use the user's geolocation
-function getUserLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-            const { latitude, longitude } = position.coords;
-            map.setView([latitude, longitude], 13);  // Center map on user location
-            // Fetch traffic data for user location
-            fetchTrafficData(latitude, longitude);
-        }, () => {
-            alert('Geolocation not supported or denied.');
-        });
-    } else {
-        alert('Geolocation not supported.');
+    try {
+        let user = await User.findOne({ username });
+
+        if (user) {
+            return res.status(400).json({ message: 'User already exists. Please log in.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10); // Hash the password
+        user = new User({ username, password: hashedPassword });
+
+        await user.save();
+        res.status(201).json({ message: 'Registration successful.', user });
+    } catch (error) {
+        console.error('Error in /register:', error);
+        res.status(500).json({ message: 'An error occurred. Please try again.' });
     }
-}
+});
 
-// Fetch traffic data from TomTom's Traffic API
-function fetchTrafficData(lat, lon) {
-    const apiKey = 'AhGkbtIXQ6QyUbnrpvYDSyrErQWnD8W5'; // Replace with your TomTom API key
-    const url = `https://api.tomtom.com/trafficServices/v1/incidentDetails?lat=${lat}&lon=${lon}&key=${apiKey}`;
+// Login API
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
 
-    axios.get(url)
-        .then(response => {
-            // Assuming response contains an array of traffic incidents
-            const trafficData = response.data;
-            console.log(trafficData);
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required.' });
+    }
 
-            // Remove any previous markers before adding new ones
-            map.eachLayer(layer => {
-                if (layer instanceof L.Circle) {
-                    map.removeLayer(layer);
-                }
-            });
+    try {
+        const user = await User.findOne({ username });
 
-            // Add markers based on traffic data
-            if (trafficData && trafficData.incidents) {
-                trafficData.incidents.forEach(incident => {
-                    const { lat, lon, severity } = incident;
-                    let color = 'green'; // Default low traffic
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
 
-                    // Change marker color based on severity
-                    if (severity === 'HIGH') {
-                        color = 'red'; // Heavy traffic
-                    } else if (severity === 'MODERATE') {
-                        color = 'orange'; // Moderate traffic
-                    }
+        const isPasswordValid = await bcrypt.compare(password, user.password); // Compare hashed passwords
 
-                    // Add a circle marker for the traffic incident
-                    L.circle([lat, lon], { radius: 100, color: color }).addTo(map)
-                        .bindPopup(`<b>Traffic Incident</b><br>Severity: ${severity}`);
-                });
-            } else {
-                console.log('No traffic incidents found for this location.');
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching traffic data:', error);
-        });
-}
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
 
-// Toggle dark mode for controls panel
-function toggleDarkMode() {
-    document.getElementById('controls').classList.toggle('dark-mode');
-}
+        res.status(200).json({ message: 'Login successful.', user });
+    } catch (error) {
+        console.error('Error in /login:', error);
+        res.status(500).json({ message: 'An error occurred. Please try again.' });
+    }
+});
 
-// Simulate logout functionality
-function logout() {
-    alert('Logging out...');
-    // Add actual logout logic (e.g., clear session or token)
-    window.location.href = 'index.html'; // Redirect to login page
-}
+// Traffic Data API
+app.get('/traffic', async (req, res) => {
+    const { location } = req.query; // Location should be latitude,longitude
+    console.log('Requested location:', location); // Log the location
+
+    const apiKey = process.env.TOMTOM_API_KEY; // Use environment variable
+    const apiUrl = `https://api.tomtom.com/traffic/services/4/flowSegmentData/relative0/10/json?key=${apiKey}&point=${location}`;
+
+    try {
+        const response = await axios.get(apiUrl);
+        res.status(200).json(response.data); // Send the traffic data as JSON
+    } catch (error) {
+        console.error('Error fetching traffic data:', error); // Log the error
+        res.status(500).json({ message: 'Failed to fetch traffic data.' });
+    }
+});
+
+// Route Suggestion API
+app.get('/route', async (req, res) => {
+    const { start, end } = req.query; // Start and end should be latitude,longitude
+    const apiKey = process.env.TOMTOM_API_KEY; // Use environment variable
+    const apiUrl = `https://api.tomtom.com/routing/1/calculateRoute/${start}:${end}/json?key=${apiKey}`;
+
+    try {
+        const response = await axios.get(apiUrl);
+        res.status(200).json(response.data);
+    } catch (error) {
+        console.error('Error fetching route data:', error);
+        res.status(500).json({ message: 'Failed to fetch route data.' });
+    }
+});
+
+// Handle preflight OPTIONS request
+app.options('*', cors(corsOptions)); // Respond to all OPTIONS requests
+
+// Start the server
+const PORT = process.env.PORT || 3000; // Use environment variable for port
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

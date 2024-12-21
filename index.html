@@ -5,130 +5,244 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Road Companion Traffic Tracker</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: url('car-background.jpeg') no-repeat center center fixed;
-            background-size: cover;
-            color: white;
-            text-align: center;
-        }
-        .container {
-            max-width: 400px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 10px;
-        }
-        h1 {
-            font-size: 2em;
-            margin-bottom: 20px;
-            color: coral;
+        #map {
+            height: 80vh;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
 
-        h2 {
-            font-size: 1.5em;
-            margin-bottom: 20px;
-        }
-        form {
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
-        input {
+
+        #controls input {
             margin-bottom: 10px;
-            padding: 10px;
+            padding: 8px;
             border-radius: 5px;
-            border: none;
+            border: 1px solid #ddd;
         }
-        button {
+
+        #controls button {
+            margin-bottom: 10px;
             padding: 10px;
             background: coral;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 1.1em;
+            font-size: 1em;
         }
-        button:hover {
-            background: #e95b3c;
+
+        #controls button:hover {
+            background: #ff704d;
         }
-        .link {
-            color: lightblue;
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #controls.dark-mode {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+        }
+
+        #controls.dark-mode input {
+            background-color: #444;
+            color: white;
+            border: 1px solid #666;
+        }
+
+        #controls.dark-mode button {
+            background: #555;
+        }
+
+        #controls.dark-mode button:hover {
+            background: #777;
+        }
+
+        #legend {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             margin-top: 10px;
-            display: block;
+        }
+
+        .legend-item {
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>ROAD COMPANION TRAFFIC TRACKER</h1>
-        <h2>Register or Login</h2>
-        <!-- Form for Register -->
-        <form id="registrationForm">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-        </form>
-        <!-- Separate login button -->
-        <button id="loginButton" style="margin-top: 10px;">Login</button>
-        <a href="updates.html" class="link">View App Updates</a>
+    <div id="controls">
+        <input type="text" id="location" placeholder="Enter location (e.g. Onitsha, Nigeria)">
+        <button onclick="setLocation()">Set Location</button>
+        <button onclick="getUserLocation()">Use My Location</button>
+        <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        <button onclick="logout()">Logout</button>
+        
+        <div id="legend">
+            <h3>Key</h3>
+            <div class="legend-item"><span style="color:#33cc33;">&#9632;</span> Low Traffic</div>
+            <div class="legend-item"><span style="color:#ffcc00;">&#9632;</span> Moderate Traffic</div>
+            <div class="legend-item"><span style="color:#ff3300;">&#9632;</span> High Traffic</div>
+        </div>
     </div>
 
+    <div id="map"></div>
+
+    <!-- Leaflet CDN script -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        const backendUrl = 'http://localhost:3000'; // Backend URL
+        let map;
+        let userLocation = null;
+        const apiKey = 'AhGkbtIXQ6QyUbnrpvYDSyrErQWnD8W5'; // Replace with your actual TomTom API key
 
-        // Register User
-        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-        
-            try {
-                const response = await fetch(`${backendUrl}/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password }),
-                });
-        
-                const data = await response.json();
-        
-                if (response.ok) {
-                    alert(data.message);
-                    window.location.href = 'tracker.html';  // Redirect on success
-                } else {
-                    alert(data.message);  // Show error message for invalid credentials
-                }
-            } catch (error) {
-                alert('An error occurred. Please try again.');
-                console.error(error);
-            }
+        // Define the custom icon here
+        const customIcon = L.icon({
+            iconUrl: 'images/marker-icon.png',  // Ensure the path is correct
+            shadowUrl: 'images/marker-shadow.png', // Ensure the path is correct
+            iconSize: [25, 41], // Size of the icon
+            iconAnchor: [12, 41], // Anchor point of the icon
+            popupAnchor: [1, -34], // Popup position
+            shadowSize: [41, 41] // Size of the shadow
         });
-        
-        // Login User
-        document.getElementById('loginButton').addEventListener('click', async () => {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
 
-            try {
-                const response = await fetch(`${backendUrl}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password }),
+        // Default location for Onitsha, Nigeria (Latitude and Longitude)
+        const defaultLocation = [6.1419, 6.7982];
+
+        // Initialize the map and center it on default location (Onitsha, Nigeria)
+        function initializeMap() {
+            map = L.map('map').setView(defaultLocation, 13); // Set initial view to Onitsha
+
+            // TomTom map tile layer
+            L.tileLayer('https://{s}.api.tomtom.com/map/1/tile/basic/{z}/{x}/{y}.png?key=' + apiKey, {
+                attribution: '&copy; <a href="https://www.tomtom.com">TomTom</a>',
+            }).addTo(map);
+
+            // Add a marker for the default location using custom icons
+            L.marker(defaultLocation, { icon: customIcon }).addTo(map).bindPopup("Onitsha, Nigeria").openPopup();
+
+            // Attempt to get the user's location if they allow
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    updateMapLocation(userLocation);
+                }, function(error) {
+                    alert("Unable to retrieve your location.");
                 });
-                const data = await response.json();
-                alert(data.message);
-                if (response.ok) {
-                    window.location.href = 'tracker.html';  // Redirect to tracker page on login success
-                }
-            } catch (error) {
-                alert('Error logging in. Please try again.');
-                console.error(error);
             }
-        });
+        }
+
+        // Update map location based on user input or geolocation
+        function updateMapLocation(location) {
+            if (location) {
+                map.setView(location, 13);
+                L.marker(location, { icon: customIcon }).addTo(map).bindPopup("Your Location").openPopup();
+                getTrafficData(location); // Fetch traffic data for the location
+            }
+        }
+
+        // Function to fetch traffic data using TomTom Traffic API
+        function getTrafficData(location) {
+            const locationStr = location.join(',');
+            const url = `https://api.tomtom.com/traffic/services/4/incidentDetails?point=${locationStr}&key=${apiKey}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.incidents) {
+                        data.incidents.forEach(item => {
+                            const markerColor = getTrafficColor(item.severity);
+                            L.circleMarker([item.position.latitude, item.position.longitude], { color: markerColor, radius: 8 })
+                                .addTo(map)
+                                .bindPopup(`${item.severity} Traffic`);
+                        });
+                    }
+                })
+                .catch(error => console.log('Error fetching traffic data:', error));
+        }
+
+        // Function to get marker color based on traffic status
+        function getTrafficColor(severity) {
+            switch (severity) {
+                case 'low': return '#33cc33';  // Low Traffic - Green
+                case 'moderate': return '#ffcc00';  // Moderate Traffic - Yellow
+                case 'high': return '#ff3300';  // High Traffic - Red
+                default: return '#000';  // Default color (black)
+            }
+        }
+
+        // Geocoding function to convert location name to coordinates using TomTom API
+        function geocodeLocation(location) {
+            const url = `https://api.tomtom.com/search/2/geocode/${encodeURIComponent(location)}.json?key=${apiKey}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.results && data.results.length > 0) {
+                        const lat = data.results[0].position.lat;
+                        const lng = data.results[0].position.lng;
+                        const location = [lat, lng];
+                        updateMapLocation(location);
+                    } else {
+                        alert("Location not found.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Geocoding error:", error);
+                    alert("Unable to retrieve location.");
+                });
+        }
+
+        // Set location based on user input
+        function setLocation() {
+            const locationInput = document.getElementById('location').value.trim();
+            if (locationInput) {
+                geocodeLocation(locationInput);
+            } else {
+                alert("Please enter a location.");
+            }
+        }
+
+        // Use the user's geolocation
+        function getUserLocation() {
+            if (userLocation) {
+                updateMapLocation(userLocation);
+            } else {
+                alert("Unable to access your location.");
+            }
+        }
+
+        // Toggle dark mode for controls panel
+        function toggleDarkMode() {
+            const controls = document.getElementById('controls');
+            controls.classList.toggle('dark-mode');
+        }
+
+        // Logout functionality
+        function logout() {
+            alert('You have been logged out.');
+            window.location.href = 'index.html'; // Redirect to index page
+        }
+        
+        // Initialize map when the page is ready
+        window.onload = initializeMap;
     </script>
 </body>
 </html>
