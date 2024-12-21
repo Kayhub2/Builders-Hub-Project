@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",             // To start server in production
-    "dev": "nodemon index.js",            // To start server in development with hot-reloading
-    "build": "echo 'No build step defined' && exit 0",  // Placeholder for build process (you can customize this if needed for deployment)
-    "test": "echo \"Error: no test specified\" && exit 1"  // Placeholder for testing
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "build": "echo 'No build step defined' && exit 0",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
